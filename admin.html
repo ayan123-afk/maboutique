@@ -6,68 +6,72 @@
 <body>
   <h1>Admin Panel - Add Product</h1>
 
-  <!-- Product Form -->
   <input type="text" id="title" placeholder="Product Title"><br><br>
   <input type="number" id="price" placeholder="Price"><br><br>
   <textarea id="description" placeholder="Description"></textarea><br><br>
   <input type="file" id="image"><br><br>
 
   <button onclick="uploadProduct()">Add Product</button>
+  <p id="status" style="color:green; font-weight:bold;"></p>
 
   <script type="module">
-    // ✅ Import Supabase client from CDN
     import { createClient } from "https://esm.sh/@supabase/supabase-js";
 
-    // ✅ Supabase URL & Anon Key (replace with your keys)
     const supabaseUrl = "https://lqpfuwmjtrkpjetepucb.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxcGZ1d21qdHJrcGpldGVwdWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzNTkzNjEsImV4cCI6MjA3ODkzNTM2MX0.ecoBgJ_WWeGOd8RXXkBs2Og477RQsR5iN45HUP_Dlp8";
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // ✅ Upload product function
     async function uploadProduct() {
+      const statusEl = document.getElementById("status");
+      statusEl.textContent = "";
+
       const title = document.getElementById("title").value;
       const price = document.getElementById("price").value;
       const description = document.getElementById("description").value;
       const file = document.getElementById("image").files[0];
 
       if (!title || !price || !file) {
-        alert("Title, price & image are required!");
+        statusEl.style.color = "red";
+        statusEl.textContent = "Title, price & image are required!";
         return;
       }
 
-      // 1️⃣ Upload Image
-      const filePath = `products/${Date.now()}-${file.name}`;
-      const { data: uploadedImage, error: uploadError } = await supabase.storage
-        .from("product-images")
-        .upload(filePath, file);
+      try {
+        // 1️⃣ Upload image to Supabase Storage
+        const filePath = `products/${Date.now()}-${file.name}`;
+        const { data: uploadedImage, error: uploadError } = await supabase.storage
+          .from("product-images")
+          .upload(filePath, file);
 
-      if (uploadError) {
-        alert("Image upload error: " + uploadError.message);
-        return;
+        if (uploadError) throw uploadError;
+
+        const imageUrl = supabase.storage
+          .from("product-images")
+          .getPublicUrl(uploadedImage.path).data.publicUrl;
+
+        // 2️⃣ Insert product into database
+        const { error: insertError } = await supabase.from("products").insert([
+          { title, price, description, image_url: imageUrl }
+        ]);
+
+        if (insertError) throw insertError;
+
+        // ✅ Success message
+        statusEl.style.color = "green";
+        statusEl.textContent = "Product Uploaded Successfully!";
+
+        // Clear form
+        document.getElementById("title").value = "";
+        document.getElementById("price").value = "";
+        document.getElementById("description").value = "";
+        document.getElementById("image").value = "";
+
+      } catch (err) {
+        statusEl.style.color = "red";
+        statusEl.textContent = "Error: " + err.message;
+        console.error(err);
       }
-
-      const imageUrl = supabase.storage
-        .from("product-images")
-        .getPublicUrl(uploadedImage.path).data.publicUrl;
-
-      // 2️⃣ Insert product into database
-      const { error: insertError } = await supabase.from("products").insert([
-        { title, price, description, image_url: imageUrl }
-      ]);
-
-      if (insertError) {
-        alert("Database Error: " + insertError.message);
-        return;
-      }
-
-      alert("Product Added Successfully!");
-
-      // Clear form
-      document.getElementById("title").value = "";
-      document.getElementById("price").value = "";
-      document.getElementById("description").value = "";
-      document.getElementById("image").value = "";
     }
   </script>
 </body>
