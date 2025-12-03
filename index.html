@@ -6,7 +6,6 @@
 <body>
   <h1>All Products</h1>
 
-  <!-- Container for products -->
   <div id="products" style="display:flex; flex-wrap:wrap; gap:20px;"></div>
 
   <script type="module">
@@ -18,7 +17,7 @@
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     async function loadProducts() {
-      const { data, error } = await supabase.from("products").select("*");
+      const { data, error } = await supabase.from("products").select("*").order('id', { ascending: false });
 
       if (error) {
         console.log(error);
@@ -26,6 +25,7 @@
       }
 
       const productsDiv = document.getElementById("products");
+      productsDiv.innerHTML = "";
 
       data.forEach(p => {
         productsDiv.innerHTML += `
@@ -39,6 +39,7 @@
       });
     }
 
+    // Load products every time page opens
     loadProducts();
   </script>
 </body>
